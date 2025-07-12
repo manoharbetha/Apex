@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Quiz & Weather Dashboard</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      height: 100vh;
+      flex-direction: row;
+    }
+
+    .panel {
+      flex: 1;
+      padding: 30px;
+      overflow-y: auto;
+      box-sizing: border-box;
+    }
+
+    .left {
+      background: #ffffff;
+      border-right: 2px solid #e0e0e0;
+    }
+
+    .right {
+      background: #e3f2fd;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .question {
+      font-size: 1.2em;
+      margin-bottom: 15px;
+    }
+
+    .weather-input {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    input {
+      padding: 10px;
+      width: 70%;
+      font-size: 1em;
+      border: 1px solid #bbb;
+      border-radius: 5px;
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-weight: bold;
+      border: none;
+      border-radius: 6px;
+      background-color: #1976d2;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0d47a1;
+    }
+
+    .weather-result {
+      font-size: 1.1em;
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .answers {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .answer {
+      padding: 10px;
+      background-color: #f1f1f1;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .answer:hover {
+      background-color: #d1ecf1;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+      }
+
+      .panel {
+        flex: none;
+        width: 100%;
+        height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Quiz Section -->
+  <div class="panel left">
+    <h2>🧠 Quiz Time</h2>
+    <div id="quiz">
+      <div class="question" id="question">Loading question...</div>
+      <div class="answers" id="answers"></div>
+      <button onclick="loadQuestion()">Next Question</button>
+    </div>
+  </div>
+
+  <!-- Weather Section -->
+  <div class="panel right">
+    <h2>🌤️ Weather Now</h2>
+    <div class="weather-input">
+      <input type="text" id="city" placeholder="Enter city name..." />
+      <br>
+      <button onclick="getWeather()">Get Weather</button>
+    </div>
+    <div class="weather-result" id="weatherResult">Weather info will appear here.</div>
+  </div>
+
+  <script>
+    // ====== Quiz Logic ======
+    async function loadQuestion() {
+      document.getElementById("question").textContent = "Loading...";
+      document.getElementById("answers").innerHTML = "";
+      try {
+        const res = await fetch("https://opentdb.com/api.php?amount=1&type=multiple");
+        const data = await res.json();
+        const q = data.results[0];
+        const answers = [...q.incorrect_answers, q.correct_answer].sort(() => Math.random() - 0.5);
+
+        document.getElementById("question").innerHTML = decode(q.question);
+        const answersContainer = document.getElementById("answers");
+        answers.forEach(ans => {
+          const btn = document.createElement("div");
+          btn.className = "answer";
+          btn.innerText = decode(ans);
+          btn.onclick = () => {
+            if (ans === q.correct_answer) {
+              btn.style.backgroundColor = "#a5d6a7"; // Green
+            } else {
+              btn.style.backgroundColor = "#ef9a9a"; // Red
+            }
+          };
+          answersContainer.appendChild(btn);
+        });
+      } catch (err) {
+        document.getElementById("question").textContent = "Failed to load question.";
+      }
+    }
+
+    function decode(html) {
+      const txt = document.createElement("textarea");
+      txt.innerHTML = html;
+      return txt.value;
+    }
+
+    // ====== Weather Logic ======
+    async function getWeather() {
+      const city = document.getElementById("city").value.trim();
+      const output = document.getElementById("weatherResult");
+
+      if (!city) {
+        output.innerHTML = "Please enter a city name.";
+        return;
+      }
+
+      output.innerHTML = "Loading weather...";
+      try {
+        const apiKey = "8ee8c18c9208c60e6f46aa58bb924712";
+        const res = await fetch(
+          `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`
+        );
+        const data = await res.json();
+        if (data.cod !== 200) {
+          output.innerHTML = "City not found!";
+          return;
+        }
+        output.innerHTML = `
+          <strong>${data.name}</strong><br>
+          Temperature: ${data.main.temp}°C<br>
+          Weather: ${data.weather[0].main}<br>
+          Wind: ${data.wind.speed} m/s
+        `;
+      } catch (error) {
+        output.innerHTML = "Error fetching weather.";
+      }
+    }
+
+    // Load first quiz on page load
+    loadQuestion();
+  </script>
+</body>
+</html>
